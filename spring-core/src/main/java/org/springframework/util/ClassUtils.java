@@ -862,7 +862,9 @@ public abstract class ClassUtils {
 		if (nameEndIndex == -1) {
 			nameEndIndex = className.length();
 		}
+		//获取不含报名的类名称
 		String shortName = className.substring(lastDotIndex + 1, nameEndIndex);
+		//用包分隔符替换内部类的标识符
 		shortName = shortName.replace(INNER_CLASS_SEPARATOR, PACKAGE_SEPARATOR);
 		return shortName;
 	}

@@ -66,13 +66,17 @@ public class AnnotationBeanNameGenerator implements BeanNameGenerator {
 
 	@Override
 	public String generateBeanName(BeanDefinition definition, BeanDefinitionRegistry registry) {
+		//当前bean定义是否是AnnotatedBeanDefinition类型
 		if (definition instanceof AnnotatedBeanDefinition) {
+			//若是注解类型的bean定义，则通过定义获取bean的名称
 			String beanName = determineBeanNameFromAnnotation((AnnotatedBeanDefinition) definition);
+			//若获取到对应的beanName则直接返回
 			if (StringUtils.hasText(beanName)) {
 				// Explicit bean name found.
 				return beanName;
 			}
 		}
+		//若bean定义不是AnnotatedBeanDefinition或通过注解无法获取对应的beanName则构建一个唯一的beanName
 		// Fallback: generate a unique default bean name.
 		return buildDefaultBeanName(definition, registry);
 	}
@@ -83,11 +87,15 @@ public class AnnotationBeanNameGenerator implements BeanNameGenerator {
 	 * @return the bean name, or {@code null} if none is found
 	 */
 	protected String determineBeanNameFromAnnotation(AnnotatedBeanDefinition annotatedDef) {
+		//获取bean定义的元数据
 		AnnotationMetadata amd = annotatedDef.getMetadata();
+		//获取bean定义的注解类型列表
 		Set<String> types = amd.getAnnotationTypes();
 		String beanName = null;
 		for (String type : types) {
+			//根据注解类型获取对应的注解属性值对象
 			AnnotationAttributes attributes = AnnotationConfigUtils.attributesFor(amd, type);
+			//检测指定的注解类型是否通过@Component,或者@ManagedBean或者@Named的注解，若是，则获取对应的value值作为bean的名称
 			if (isStereotypeWithNameValue(type, amd.getMetaAnnotationTypes(type), attributes)) {
 				Object value = attributes.get("value");
 				if (value instanceof String) {
@@ -146,7 +154,9 @@ public class AnnotationBeanNameGenerator implements BeanNameGenerator {
 	 * @return the default bean name (never {@code null})
 	 */
 	protected String buildDefaultBeanName(BeanDefinition definition) {
+		//通过类反射获取不含报名的类名
 		String shortClassName = ClassUtils.getShortName(definition.getBeanClassName());
+		//首字母小写变更
 		return Introspector.decapitalize(shortClassName);
 	}
 

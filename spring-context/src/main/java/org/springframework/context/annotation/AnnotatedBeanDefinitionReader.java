@@ -79,7 +79,9 @@ public class AnnotatedBeanDefinitionReader {
 		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
 		Assert.notNull(environment, "Environment must not be null");
 		this.registry = registry;
+		//初始化条件判定对象，用于解析@Conditional注解的处理
 		this.conditionEvaluator = new ConditionEvaluator(registry, environment, null);
+		//注册默认的注解配置处理器（@Configuration,@Autowired, @Required, @Resource， @EventListener, EventListenerFactory，jpi的相关配置）
 		AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
 	}
 
@@ -164,31 +166,42 @@ public class AnnotatedBeanDefinitionReader {
 	 */
 	@SuppressWarnings("unchecked")
 	public void registerBean(Class<?> annotatedClass, String name, Class<? extends Annotation>... qualifiers) {
+		//构建指定的Bean定义的元数据信息
 		AnnotatedGenericBeanDefinition abd = new AnnotatedGenericBeanDefinition(annotatedClass);
+		//判断bean定义的条件是否满足，不满足则跳过
 		if (this.conditionEvaluator.shouldSkip(abd.getMetadata())) {
 			return;
 		}
-
+		//获取bean定义中的的@Scope注解对象
 		ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(abd);
+		//将作用域名称放入bean定义中
 		abd.setScope(scopeMetadata.getScopeName());
+		//生成bean的名称
 		String beanName = (name != null ? name : this.beanNameGenerator.generateBeanName(abd, this.registry));
+		//@Lazy,@Primary, @DependsOn等注解属性信息放入bean定义
 		AnnotationConfigUtils.processCommonDefinitionAnnotations(abd);
+		//若存在限定的注解则将注解信息放入bean定义
 		if (qualifiers != null) {
 			for (Class<? extends Annotation> qualifier : qualifiers) {
+				//先判断当前注解是否是为@Primary
 				if (Primary.class == qualifier) {
 					abd.setPrimary(true);
 				}
+				//是否为@Lazy
 				else if (Lazy.class == qualifier) {
 					abd.setLazyInit(true);
 				}
+				//放入限定符对象
 				else {
 					abd.addQualifier(new AutowireCandidateQualifier(qualifier));
 				}
 			}
 		}
-
+		//构建bean定义持有器
 		BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(abd, beanName);
+		//判断是否使用cglib的动态代理模式，并放入定义信息完成bean定义的注册
 		definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
+		//注册代理bean定义到容器
 		BeanDefinitionReaderUtils.registerBeanDefinition(definitionHolder, this.registry);
 	}
 
@@ -199,9 +212,12 @@ public class AnnotatedBeanDefinitionReader {
 	 */
 	private static Environment getOrCreateEnvironment(BeanDefinitionRegistry registry) {
 		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
+		//获取或创建环境对象
+        //若当前registry是EnvironmentCapable类型的实现则通过registry获取环境对象
 		if (registry instanceof EnvironmentCapable) {
 			return ((EnvironmentCapable) registry).getEnvironment();
 		}
+		//创建标准环境对象
 		return new StandardEnvironment();
 	}
 

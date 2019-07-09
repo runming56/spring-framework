@@ -71,34 +71,39 @@ class ConditionEvaluator {
 	 * @return if the item should be skipped
 	 */
 	public boolean shouldSkip(AnnotatedTypeMetadata metadata, ConfigurationPhase phase) {
+		//是否存在@Conditional注解
 		if (metadata == null || !metadata.isAnnotated(Conditional.class.getName())) {
 			return false;
 		}
-
+		//首次进入
 		if (phase == null) {
+			//判断metadata是否为Configuration类型的类，若是则将迭代调用此时phase为Configuration
 			if (metadata instanceof AnnotationMetadata &&
 					ConfigurationClassUtils.isConfigurationCandidate((AnnotationMetadata) metadata)) {
 				return shouldSkip(metadata, ConfigurationPhase.PARSE_CONFIGURATION);
 			}
+			//迭代调用，phase为register_bean类型
 			return shouldSkip(metadata, ConfigurationPhase.REGISTER_BEAN);
 		}
-
 		List<Condition> conditions = new ArrayList<Condition>();
+		//获取所有的conditional的属性值
 		for (String[] conditionClasses : getConditionClasses(metadata)) {
 			for (String conditionClass : conditionClasses) {
 				Condition condition = getCondition(conditionClass, this.context.getClassLoader());
 				conditions.add(condition);
 			}
 		}
-
+		//若多个Condition查看是否带有@Order或者@Priority之类的注解，按此类注解的值排序，值越小越靠前执行
 		AnnotationAwareOrderComparator.sort(conditions);
 
 		for (Condition condition : conditions) {
 			ConfigurationPhase requiredPhase = null;
+			//condition是否ConfigurationCondition的实现，主要针对spring boot中的一些扩展Conditional的实现，如@ConditionOnBean之类
 			if (condition instanceof ConfigurationCondition) {
 				requiredPhase = ((ConfigurationCondition) condition).getConfigurationPhase();
 			}
 			if (requiredPhase == null || requiredPhase == phase) {
+				//调用condition的matches方法查看是否匹配，若不匹配则返回true
 				if (!condition.matches(this.context, metadata)) {
 					return true;
 				}
@@ -110,6 +115,7 @@ class ConditionEvaluator {
 
 	@SuppressWarnings("unchecked")
 	private List<String[]> getConditionClasses(AnnotatedTypeMetadata metadata) {
+		//获取所有含有Conditional注解属性值
 		MultiValueMap<String, Object> attributes = metadata.getAllAnnotationAttributes(Conditional.class.getName(), true);
 		Object values = (attributes != null ? attributes.get("value") : null);
 		return (List<String[]>) (values != null ? values : Collections.emptyList());
